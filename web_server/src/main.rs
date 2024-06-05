@@ -24,10 +24,10 @@ fn handle_connection(mut stream: TcpStream) {
         }
     };
 
-    let (status_line, filename) = if request_line == "GET / HTTP/1.1" {
-        ("HTTP/1.1 200 OK", "hello.html")
-    } else {
-        ("HTTP/1.1 404 NOT FOUND", "404.html")
+    let (status_line, filename) = match request_line.as_str(){
+        "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "hello.html"),
+        "GET /only-for-pros HTTP/1.1" => ("HTTP/1.1 403 Forbidden", "403.html"),
+        _ => ("HTTP/1.1 404 NOT FOUND", "404.html"),
     };
 
     let contents = match fs::read_to_string(filename) {
@@ -38,6 +38,11 @@ fn handle_connection(mut stream: TcpStream) {
             }
             let error_page = match status_line {
                 "HTTP/1.1 404 NOT FOUND" => include_str!("404.html"),
+                "HTTP/1.1 403 Forbidden" => 
+                {
+                    println!("{}", status_line); // Log the status line
+                    include_str!("403.html")
+                }
                 _ => {
                     let error_page = include_str!("500.html");
                     let response = format!(
