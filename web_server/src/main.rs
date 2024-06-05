@@ -8,15 +8,17 @@ fn main() {
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
     for stream in listener.incoming() {
         let stream = stream.unwrap();
-        handle_connection(stream);
+        handle(stream);
     }
 }
 
-fn handle_connection(mut stream: TcpStream) {
+fn handle(mut stream: TcpStream) {
     let buf_reader = BufReader::new(&mut stream);
+    //read request line
     let request_line = match buf_reader.lines().next() {
         Some(Ok(line)) => line,
         _ => {
+            //404 error handling when Bad Request Encountered
             let response = format!("HTTP/1.1 400 Bad Request\r\n\r\n");
             stream.write_all(response.as_bytes()).unwrap();
             println!("HTTP/1.1 400 Bad Request");
@@ -26,10 +28,12 @@ fn handle_connection(mut stream: TcpStream) {
 
     let (status_line, filename) = match request_line.as_str(){
         "GET / HTTP/1.1" => ("HTTP/1.1 200 OK", "hello.html"),
+        //403 code for Forbidden endpoint
         "GET /only-for-pros HTTP/1.1" => ("HTTP/1.1 403 Forbidden", "403.html"),
         _ => ("HTTP/1.1 404 NOT FOUND", "404.html"),
     };
 
+    //Largely for custom pages for errors: 404,403,500
     let contents = match fs::read_to_string(filename) {
         Ok(contents) => contents,
         Err(_) => {
@@ -55,6 +59,7 @@ fn handle_connection(mut stream: TcpStream) {
                     return;
                 }
             };
+            //get response acc to specified format
             let response = format!(
                 "{}\r\nContent-Length: {}\r\n\r\n{}",
                 status_line,
